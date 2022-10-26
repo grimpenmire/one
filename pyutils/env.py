@@ -25,6 +25,6 @@ def __getattr__(name):
         if definition['optional']:
             return definition['default']
         else:
-            raise ValueError(f'Environment variable {name} not defined')
+            raise ValueError(f'Environment variable {name} not set')
 
     return definition['type'](value)
