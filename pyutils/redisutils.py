@@ -8,7 +8,7 @@ from . import env
 
 logger = logging.getLogger(__name__)
 
-defenv('REDIS_MAIN', str, default='redis-main')
+defenv('REDIS_MAIN', str, default='redis')
 defenv('REDIS_MAX_RETRIES', int, default=30)
 
 

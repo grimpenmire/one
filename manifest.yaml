@@ -51,13 +51,10 @@ spec:
       template:
         spec:
           containers:
-          - name: victor
-            command: ["python", "-m", "sstester.tester"]
-            image: "grimpen/one:%VERSION%"
-            imagePullPolicy: IfNotPresent
-            env:
-            - name: REDIS_MAIN
-              value: redis
+            - name: sstester
+              command: ["python", "-m", "sstester.tester"]
+              image: "grimpen/one:%VERSION%"
+              imagePullPolicy: Never
           restartPolicy: OnFailure
 ---
 apiVersion: v1
@@ -74,3 +71,82 @@ spec:
       targetPort: 6379
   selector:
     app: redis
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+spec:
+  selector:
+    matchLabels:
+      app: api
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: api
+    spec:
+      containers:
+        - name: api
+          image: "grimpen/one:%VERSION%"
+          command: ["gunicorn", "api.app:create_app()", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--workers", "4"]
+          ports:
+            - containerPort: 8000
+          env:
+            - name: API_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret-key
+                  key: secret-key
+      volumes:
+        - name: redis-data
+          persistentVolumeClaim:
+            claimName: redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels:
+    app: api
+spec:
+  type: ClusterIP
+  ports:
+    - name: api
+      port: 80
+      targetPort: 8000
+  selector:
+    app: api
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: api
+  annotations:
+    # notice that we need to prefix the middleware name with the
+    # namespace it's in (default in this case) and also add the
+    # @kubernetescrd suffix, otherwise this won't work.
+    traefik.ingress.kubernetes.io/router.middlewares: default-api-prefix-stripper@kubernetescrd
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service:
+                name: api
+                port:
+                  number: 80
+---
+# looks like k3s traefik does not support the
+# traefik.ingress.kubernetes.io/rewrite-target annotation atm, so we
+# use this middleware instead to strip the /api/v1 prefix
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: api-prefix-stripper
+spec:
+  stripPrefix:
+    prefixes:
+      - /api/v1
