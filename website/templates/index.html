@@ -30,7 +30,7 @@
       var lastFetchedServers = [];
 
       async function getServers() {
-          let response = await fetch('http://grimpen.one/api/v1/servers');
+          let response = await fetch('https://grimpen.one/api/v1/servers');
           let jsonResponse = await response.json();
           return jsonResponse["value"];
       }
