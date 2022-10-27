@@ -1,0 +1,50 @@
+<html>
+  <head>
+    <title>Grimpen One - Censorship Circumvention Tools</title>
+    <script lang="javascript">
+      var lastFetchedServers = [];
+
+      async function getServers() {
+          let response = await fetch('http://grimpen.one/api/v1/servers');
+          let jsonResponse = await response.json();
+          return jsonResponse["value"];
+      }
+
+      async function updateServers() {
+          lastFetchedServers = await getServers();
+          let ul = document.querySelector('ul#serverlist');
+          ul.innerHTML = '';
+          let i = 0;
+          for (const server of lastFetchedServers) {
+              let li = document.createElement('div');
+              androidLink = `<a onclick='copyToClipboard(getAndroidLink(lastFetchedServers[${i}].config))' href="#">android</a>`;
+              iosLink = `<a onclick='copyToClipboard(getIosLink(lastFetchedServers[${i}].config))' href="#">iOS</a>`;
+              jsonLink = `<a onclick='copyToClipboard(JSON.stringify(lastFetchedServers[${i}].config))' href="#">json</a>`;
+              li.innerHTML = `<div>${server.name} ${androidLink} ${iosLink} ${jsonLink}</div>`
+              ul.appendChild(li);
+              i += 1;
+          }
+      }
+
+      function getAndroidLink(config) {
+          return `ss://android/${config["name"]}`;
+      }
+
+      function getIosLink(config) {
+          return `ss://ios/${config["name"]}`;
+      }
+
+      function copyToClipboard(text) {
+          navigator.clipboard.writeText(text).then();
+      }
+
+      setInterval(updateServers, 30000);
+      updateServers();
+    </script>
+  </head>
+  <body>
+    <div>
+      <ul id="serverlist"></ul>
+    </div>
+  </body>
+</html>

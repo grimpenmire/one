@@ -114,6 +114,48 @@ spec:
   selector:
     app: api
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: website
+spec:
+  selector:
+    matchLabels:
+      app: website
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: website
+    spec:
+      containers:
+        - name: website
+          image: "grimpen/one:%VERSION%"
+          command: ["gunicorn", "website.app:create_app()", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--workers", "4"]
+          ports:
+            - containerPort: 8000
+          env:
+            - name: WEBSITE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret-key
+                  key: secret-key
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: website
+  labels:
+    app: website
+spec:
+  type: ClusterIP
+  ports:
+    - name: api
+      port: 80
+      targetPort: 8000
+  selector:
+    app: website
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
@@ -132,6 +174,13 @@ spec:
             backend:
               service:
                 name: api
+                port:
+                  number: 80
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
                 port:
                   number: 80
 ---
