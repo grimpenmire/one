@@ -164,7 +164,7 @@ metadata:
     # notice that we need to prefix the middleware name with the
     # namespace it's in (default in this case) and also add the
     # @kubernetescrd suffix, otherwise this won't work.
-    traefik.ingress.kubernetes.io/router.middlewares: default-api-prefix-stripper@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: default-api-prefix-stripper@kubernetescrd,default-api-cors-headers@kubernetescrd
 spec:
   rules:
     - http:
@@ -174,13 +174,6 @@ spec:
             backend:
               service:
                 name: api
-                port:
-                  number: 80
-          - path: /
-            pathType: Prefix
-            backend:
-              service:
-                name: website
                 port:
                   number: 80
 ---
@@ -195,3 +188,34 @@ spec:
   stripPrefix:
     prefixes:
       - /api/v1
+---
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: api-cors-headers
+spec:
+  headers:
+    accessControlAllowMethods:
+      - "GET"
+      - "OPTIONS"
+      - "PUT"
+      - "POST"
+    accessControlAllowOriginList:
+      - "https://grimpen.one"
+    accessControlMaxAge: 120
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: website
+spec:
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: website
+                port:
+                  number: 80
