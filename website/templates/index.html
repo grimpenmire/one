@@ -1,6 +1,31 @@
 <html>
   <head>
     <title>Grimpen One - Censorship Circumvention Tools</title>
+
+    <style type="text/css" media="screen">
+      .greendot {
+            height: 10px;
+            width: 10px;
+            background-color: green;
+            border-radius: 50%;
+            display: inline-block;
+      }
+      .orangedot {
+            height: 10px;
+            width: 10px;
+            background-color: orange;
+            border-radius: 50%;
+            display: inline-block;
+      }
+      .reddot {
+            height: 10px;
+            width: 10px;
+            background-color: red;
+            border-radius: 50%;
+            display: inline-block;
+      }
+    </style>
+
     <script lang="javascript">
       var lastFetchedServers = [];
 
@@ -17,21 +42,87 @@
           let i = 0;
           for (const server of lastFetchedServers) {
               let li = document.createElement('div');
+              let dot;
+              if (server.status == "working") {
+                  dot = '<span class="greendot" title="working"></span>';
+              } else if (server.status == "invalid") {
+                  dot = '<span class="orangedot" title="invalid config"></span>';
+              } else {
+                  dot = '<span class="reddot" title="not working"></span>';
+              }
               androidLink = `<a onclick='copyToClipboard(getAndroidLink(lastFetchedServers[${i}].config))' href="#">android</a>`;
               iosLink = `<a onclick='copyToClipboard(getIosLink(lastFetchedServers[${i}].config))' href="#">iOS</a>`;
-              jsonLink = `<a onclick='copyToClipboard(JSON.stringify(lastFetchedServers[${i}].config))' href="#">json</a>`;
-              li.innerHTML = `<div>${server.name} ${androidLink} ${iosLink} ${jsonLink}</div>`
+              jsonLink = `<a onclick='copyToClipboard(JSON.stringify(getShadowsocksConfig(lastFetchedServers[${i}].config)))' href="#">json</a>`;
+              li.innerHTML = `<div>${dot} ${server.name} ${androidLink} ${iosLink} ${jsonLink}</div>`
               ul.appendChild(li);
               i += 1;
           }
       }
 
       function getAndroidLink(config) {
-          return `ss://android/${config["name"]}`;
+          let password = config.method + ":" + config.password;
+          password = base64(password)
+          password = password.replace(/=/g, '')
+          return `ss://${password}@${config.remote_addr}:${config.remote_port}?plugin=${config.plugin};${encodeURIComponent(config.plugin_opts)}`;
       }
 
       function getIosLink(config) {
-          return `ss://ios/${config["name"]}`;
+          let data = `${config.method}:${config.password}@${config.remote_addr}:${config.remote_port}`
+          data = base64(data);
+          data = data.replace(/=/g, '');
+
+          let plugin_name = config.plugin;
+
+          let plugin_opt_parts = config.plugin_opts.split(';');
+          let path = '/';
+          let tls = false;
+          let host = config.remote_addr;
+          let mode = 'websocket';
+          for (const part of plugin_opt_parts) {
+              [key, value] = part.split('=');
+              if (key === 'path') {
+                  path = value;
+              }
+              if (key === 'tls') {
+                  tls = true;
+              }
+              if (key === 'host') {
+                  host = value;
+              }
+              if (key === 'mode') {
+                  mode = value;
+              }
+          }
+          let plugin_opts = {
+              'path': path,
+              'mux': true,
+              'tfo': true,
+              'host': host,
+              'mode': mode,
+              'tls': true,
+          };
+          plugin_opts = JSON.stringify(plugin_opts);
+          plugin_opts = base64(plugin_opts);
+
+          return `ss://${data}?tfo=1&${plugin_name}=${plugin_opts}`;
+      }
+
+      function getShadowsocksConfig(config) {
+          return {
+              'server': config.remote_addr,
+              'server_port': config.remote_port,
+              'local_address': '127.0.0.1',
+              'local_port': 1080,
+              'mode': 'tcp_and_udp',
+              'method': config.method,
+              'password': config.password,
+              'plugin': config.plugin,
+              'plugin_opts': config.plugin_opts,
+          }
+      }
+
+      function base64(data) {
+          return btoa(unescape(encodeURIComponent(data)));
       }
 
       function copyToClipboard(text) {
