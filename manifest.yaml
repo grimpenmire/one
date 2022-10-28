@@ -164,7 +164,7 @@ metadata:
     # notice that we need to prefix the middleware name with the
     # namespace it's in (default in this case) and also add the
     # @kubernetescrd suffix, otherwise this won't work.
-    traefik.ingress.kubernetes.io/router.middlewares: default-api-prefix-stripper@kubernetescrd,default-api-cors-headers@kubernetescrd
+    traefik.ingress.kubernetes.io/router.middlewares: default-api-prefix-stripper@kubernetescrd,default-api-cors-headers@kubernetescrd, default-ingress-whitelist@kubernetescrd
 spec:
   rules:
     - http:
@@ -208,6 +208,11 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: website
+  annotations:
+    # notice that we need to prefix the middleware name with the
+    # namespace it's in (default in this case) and also add the
+    # @kubernetescrd suffix, otherwise this won't work.
+    traefik.ingress.kubernetes.io/router.middlewares: default-ingress-whitelist@kubernetescrd
 spec:
   rules:
     - http:
@@ -219,3 +224,14 @@ spec:
                 name: website
                 port:
                   number: 80
+---
+# services are exposed using a cloudflare tunnel, so we only allow
+# access from a local address
+apiVersion: traefik.containo.us/v1alpha1
+kind: Middleware
+metadata:
+  name: ingress-whitelist
+spec:
+  ipWhiteList:
+    sourceRange:
+      - 127.0.0.0/8
