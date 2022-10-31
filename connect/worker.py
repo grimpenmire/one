@@ -12,6 +12,7 @@ from api.tunnel import TunnelManager
 defenv('CLOUDFLARE_ACCOUNT_ID', str, optional=False)
 defenv('CLOUDFLARE_ZONE_ID', str, optional=False)
 defenv('MAX_CF_TUNNELS', int, default=500)
+defenv('CONNECT_DOMAIN', str, optional=False)
 
 keep_running = True
 logger = logging.getLogger()
@@ -19,6 +20,7 @@ logger = logging.getLogger()
 account_id = env.CLOUDFLARE_ACCOUNT_ID
 zone_id = env.CLOUDFLARE_ZONE_ID
 max_tunnels = env.MAX_CF_TUNNELS
+domain = env.CONNECT_DOMAIN
 
 tunnel_name_prefix = 'tunnel-'
 
@@ -45,7 +47,6 @@ def create_tunnel(connector_id, cf, tunnel_mng):
         f'Created Cloudflare tunnel: {tunnel_name} ({tunnel_id})')
 
     logger.info('Configuring Cloudflare tunnel...')
-    domain = 'oneconnect.hair'
     hostname = f'{tunnel_name}.{domain}'
     path = 'graphql'  # just a random end-point for v2ray
     cf.accounts.cfd_tunnel.configurations.put(

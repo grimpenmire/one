@@ -161,6 +161,48 @@ spec:
   selector:
     app: website
 ---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connect-worker
+spec:
+  selector:
+    matchLabels:
+      app: connect-worker
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: connect-worker
+    spec:
+      containers:
+        - name: worker
+          image: "grimpen/one:%VERSION%"
+          command: ["python", "-m", "connect.worker"]
+          env:
+            - name: MAX_CF_TUNNELS
+              value: "500"
+            - name: CONNECT_DOMAIN
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudflare-config
+                  key: connect_domain
+            - name: CLOUDFLARE_ACCOUNT_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudflare-config
+                  key: account_id
+            - name: CLOUDFLARE_ZONE_ID
+              valueFrom:
+                configMapKeyRef:
+                  name: cloudflare-config
+                  key: zone_id
+            - name: CLOUDFLARE_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: cloudflare-api-token
+                  key: token
+---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
