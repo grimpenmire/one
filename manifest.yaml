@@ -98,6 +98,11 @@ spec:
                 secretKeyRef:
                   name: api-secret-key
                   key: secret-key
+            - name: ONE_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: oneinfo
+                  key: version
 ---
 apiVersion: v1
 kind: Service

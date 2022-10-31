@@ -6,3 +6,5 @@ __pycache__
 Dockerfile
 manifest.yaml
 deploy.sh
+deploy-local.sh
+.env

@@ -34,3 +34,6 @@ kubectl delete -f $manifest_file || true
 kubectl apply -f $manifest_file
 
 rm $manifest_file
+
+kubectl delete cm oneinfo || true
+kubectl create cm oneinfo --from-literal=version=latest
