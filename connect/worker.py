@@ -158,21 +158,23 @@ def main():
             if cf_tunnel_id:
                 active_cf_tunnel_ids.append(cf_tunnel_id)
 
-        # create a mapping of cf tunnel ids to dns record ids
-        all_dns_records = cf.zones.dns_records.get(zone_id)
-        dns_record_ids = {}
-        for dns_record in all_dns_records:
-            if dns_record['content'].endswith('.cfargotunnel.com'):
-                cname = dns_record['content']
-                cf_tunnel_id = cname[:-len('.cfargotunnel.com')]
-                dns_record_ids[cf_tunnel_id] = dns_record['id']
+        # if there are cf tunnels that are not in our redis records,
+        # delete them.
 
+        cf_tunnels = cf.accounts.cfd_tunnel.get(
+            account_id, params={'is_deleted': 'false'},
+        )
+        cf_tunnels = [
+            t for t in cf_tunnels
+            if t['name'].startswith(tunnel_mng.cf_tunnel_name_prefix)
+        ]
+
+        existing_cf_tunnel_ids = []
         for cf_tunnel in cf_tunnels:
+            existing_cf_tunnel_ids.append(cf_tunnel['id'])
             if cf_tunnel['id'] not in active_cf_tunnel_ids:
                 logger.info(
-                    f'Found unused cf tunnel: {cf_tunnel["id"]}')
-
-                logger.info('Deleting cf tunnel...')
+                    f'Deleting unused cf tunnel: {cf_tunnel["id"]}')
                 try:
                     cf.accounts.cfd_tunnel.delete(
                         account_id, cf_tunnel['id']
@@ -183,11 +185,22 @@ def main():
                         'cloudflared instance is still connected.')
                     continue
 
-                dns_record_id = dns_record_ids[cf_tunnel['id']]
-                logger.info(f'Deleting DNS record: {dns_record_id}')
-                cf.zones.dns_records.delete(zone_id, dns_record_id)
-
+                existing_cf_tunnel_ids.pop()
                 logger.info('Deleted unused cf tunnel.')
+
+        # if there are any dns records not matching existing cf
+        # tunnels, delete them.
+
+        all_dns_records = cf.zones.dns_records.get(zone_id)
+        for dns_record in all_dns_records:
+            if not dns_record['content'].endswith('.cfargotunnel.com'):
+                continue
+            domain = dns_record['content']
+            cf_tunnel_id = domain[:-len('.cfargotunnel.com')]
+            if cf_tunnel_id not in existing_cf_tunnel_ids:
+                logger.info(f'Deleting unused DNS record: {dns_record["id"]}')
+                cf.zones.dns_records.delete(zone_id, dns_record['id'])
+                logger.info(f'DNS record deleted.')
 
         time.sleep(5 if reject else 1)
 
