@@ -76,6 +76,19 @@ def get_token():
     })
 
 
+@bp.get('/connect/client')
+def get_client():
+    token = create_tunnel_token(app.secret_key)
+    version = env.ONE_VERSION
+    yaml = render_template('client-docker-compose.yml',
+                           token=token, one_version=version)
+    return Response(
+        yaml, mimetype='text/x-yaml',
+        headers={
+            'Content-Disposition': 'attachment; filename=docker-compose.yml',
+        })
+
+
 def create_tunnel_token(secret):
     connector_id = str(uuid4())
     data = {

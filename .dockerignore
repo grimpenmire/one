@@ -7,4 +7,5 @@ Dockerfile
 manifest.yaml
 deploy.sh
 deploy-local.sh
+build-cfd-image.sh
 .env

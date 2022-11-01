@@ -1,0 +1,15 @@
+ARG CFD_VERSION
+
+FROM busybox:1.35.0-uclibc as busybox
+
+FROM cloudflare/cloudflared:${CFD_VERSION}
+
+COPY --from=busybox /bin/busybox /bin/busybox
+
+USER root
+RUN ["/bin/busybox", "ln", "-s", "/bin/busybox", "/bin/sh"]
+RUN busybox ln -s /bin/busybox /bin/sleep
+USER nonroot
+
+COPY wait-for-file.sh /wait-for-file.sh
+
