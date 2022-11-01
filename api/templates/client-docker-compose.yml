@@ -1,0 +1,29 @@
+version: "3.7"
+
+services:
+  connect-client:
+    image: grimpen/one:latest
+    entrypoint: ["python", "-m", "client.client"]
+    volumes:
+      - .:/data
+    environment:
+      - CLIENT_API_TOKEN={{ token }}
+
+  ssv2ray:
+    image: acrisliu/shadowsocks-libev
+    command: ["ss-server", "-s", "0.0.0.0", "-p", "80",
+              "-k", "#MahsaAmini", "-m", "aes-256-gcm",
+              "--reuse-port", "--no-delay", "-u",
+              "--plugin", "v2ray-plugin",
+              "--plugin-opts", "server;fast-open;path=graphql"]
+    restart: always
+
+  cloudflared:
+    image: grimpen/cloudflared:2022.10.3
+    entrypoint: ["/wait-for-file.sh", "/etc/cloudflared/cfd-config.yml",
+                 "cloudflared", "tunnel", "--config", "/etc/cloudflared/cfd-config.yml", "run"]
+    restart: always
+    volumes:
+      - .:/etc/cloudflared
+    depends_on:
+      - connect-client
