@@ -8,7 +8,7 @@ services:
       - .:/data
     environment:
       - CLIENT_API_TOKEN={{ token }}
-      - SS_PASSWORD="{{ ss_password }}"
+      - SS_PASSWORD={{ ss_password }}
 
   ssv2ray:
     image: acrisliu/shadowsocks-libev
