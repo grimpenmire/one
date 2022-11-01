@@ -67,3 +67,20 @@ def get_tunnel():
 
     tunnel = app.tunnel_manager.get_tunnel(token_data['connector_id'])
     return jsonify(tunnel)
+
+
+@bp.get('/connect/token')
+def get_token():
+    return jsonify({
+        'token': create_tunnel_token(app.secret_key)
+    })
+
+
+def create_tunnel_token(secret):
+    connector_id = str(uuid4())
+    data = {
+        'version': 1,
+        'connector_id': connector_id,
+    }
+    token = jwt.encode(data, secret, algorithm='HS256')
+    return token
