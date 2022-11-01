@@ -8,12 +8,12 @@ services:
       - .:/data
     environment:
       - CLIENT_API_TOKEN={{ token }}
-      - SS_PASSWORD={{ ss_password }}
+      - SS_PASSWORD="{{ ss_password }}"
 
   ssv2ray:
     image: acrisliu/shadowsocks-libev
     command: ["ss-server", "-s", "0.0.0.0", "-p", "80",
-              "-k", "{{ password }}", "-m", "aes-256-gcm",
+              "-k", "{{ ss_password }}", "-m", "aes-256-gcm",
               "--reuse-port", "--no-delay", "-u",
               "--plugin", "v2ray-plugin",
               "--plugin-opts", "server;fast-open;path=graphql"]
