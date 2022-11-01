@@ -1,5 +1,7 @@
+import os
 import json
 import jwt
+from base64 import b64encode
 from uuid import uuid4
 from flask import (
     Blueprint, Flask, jsonify, current_app as app, render_template,
@@ -80,8 +82,12 @@ def get_token():
 def get_client():
     token = create_tunnel_token(app.secret_key)
     version = env.ONE_VERSION
+    ss_password = b64encode(os.urandom(9)).decode('ascii')
+    ss_password += '#MahsaAmini'
     yaml = render_template('client-docker-compose.yml',
-                           token=token, one_version=version)
+                           token=token,
+                           one_version=version,
+                           ss_password=ss_password)
     return Response(
         yaml, mimetype='text/x-yaml',
         headers={

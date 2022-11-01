@@ -4,10 +4,12 @@ import json
 import logging
 import requests
 from pyutils import config_logging, env, defenv
+from pyutils.sslinks import get_ss_android_link, get_ss_ios_link
 
 
 defenv('CLIENT_API_TOKEN', str, optional=False)
 defenv('CLIENT_OUTPUT_DIR', str, default='/data')
+defenv('SS_PASSWORD', str, optional=False)
 
 logger = logging.getLogger(__name__)
 
@@ -100,12 +102,24 @@ def main():
     with open(f'{env.CLIENT_OUTPUT_DIR}/cfd-creds.json', 'w') as f:
         f.write(json.dumps(cfd_creds))
 
+    config = {
+        'server': resp['hostname'],
+        'server_port': 443,
+        'password': env.SS_PASSWORD,
+        'method': 'aes-256-gcm',
+        'plugin': 'v2ray-plugin',
+        'plugin_opts': f'path=graphql;host={resp["hostname"]};tls',
+    }
+    android_link = get_ss_android_link(config)
+    logger.info(f'Android Link: {android_link}')
+    ios_link = get_ss_ios_link(config)
+    logger.info(f'iOS Link: {ios_link}')
+
     logger.info('Starting heartbeat.')
     while True:
         time.sleep(15)
         logger.info('Sending heartbeat...')
         session.get(f'{api_hostname}/connect/tunnel?token={token}')
-
 
 
 if __name__ == '__main__':
