@@ -3,8 +3,11 @@ import json
 import time
 import signal
 import logging
+import requests
+from functools import wraps
 from base64 import b64encode
 from CloudFlare import CloudFlare
+from CloudFlare.exceptions import CloudFlareAPIError
 from pyutils import env, defenv, get_redis, config_logging
 from api.tunnel import TunnelManager
 
@@ -22,8 +25,8 @@ zone_id = env.CLOUDFLARE_ZONE_ID
 max_tunnels = env.MAX_CF_TUNNELS
 domain = env.CONNECT_DOMAIN
 
-tunnel_name_prefix = 'tunnel-'
-
+cf = None
+tunnel_mng = None
 
 def signal_handler(signum, _):
     global keep_running
@@ -33,7 +36,7 @@ def signal_handler(signum, _):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
 
-def create_tunnel(connector_id, cf, tunnel_mng):
+def create_tunnel(connector_id):
     logger.info('Creating Cloudflare tunnel...')
     tunnel_name = tunnel_mng.get_tunnel_uid()
     tunnel_secret = b64encode(os.urandom(32)).decode('ascii')
@@ -97,7 +100,58 @@ def create_tunnel(connector_id, cf, tunnel_mng):
     )
 
 
+def retry(f):
+    retries = 5
+    wait_time = 1
+
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        while True:
+            try:
+                return f(*args, **kwargs)
+            except (requests.RequestException, CloudFlareAPIError) as e:
+                logger.warning(f'Request error while performing cf API call: {e}')
+                if retries == 0:
+                    logger.error('Not retrying anymore.')
+                    raise
+
+            logger.info(f'Retrying after {wait_time} second(s)...')
+            time.sleep(wait_time)
+            wait_time *= 2
+
+    return wrapper
+
+
+@retry
+def get_all_cf_tunnels():
+    cf_tunnels = cf.accounts.cfd_tunnel.get(
+        account_id, params={'is_deleted': 'false'},
+    )
+    cf_tunnels = [
+        t for t in cf_tunnels
+        if t['name'].startswith(tunnel_mng.cf_tunnel_name_prefix)
+    ]
+    return cf_tunnels
+
+
+@retry
+def delete_cf_tunnel(tunnel_id):
+    cf.accounts.cfd_tunnel.delete(account_id, tunnel_id)
+
+
+@retry
+def get_all_dns_records(zone_id):
+    return cf.zones.dns_records.get(zone_id)
+
+
+@retry
+def delete_dns_record(zone_id, dns_record_id):
+    cf.zones.dns_records.delete(zone_id, dns_record_id)
+
+
 def main():
+    global cf, tunnel_mng
+
     config_logging()
     redis = get_redis(decode_responses=True)
 
@@ -112,13 +166,7 @@ def main():
     while keep_running:
         reject = False
         reject_reason = None
-        cf_tunnels = cf.accounts.cfd_tunnel.get(
-            account_id, params={'is_deleted': 'false'},
-        )
-        cf_tunnels = [
-            t for t in cf_tunnels
-            if t['name'].startswith(tunnel_mng.cf_tunnel_name_prefix)
-        ]
+        cf_tunnels = get_all_cf_tunnels()
         if len(cf_tunnels) >= max_tunnels:
             reject = True
             reject_reason = 'No free tunnels available.'
@@ -146,7 +194,7 @@ def main():
             logger.info(
                 f'Creating tunnel for connector: {connector_id}...')
 
-            create_tunnel(connector_id, cf, tunnel_mng)
+            create_tunnel(connector_id)
 
         active_cf_tunnel_ids = []
         for key in redis.scan_iter('tunnel:*'):
@@ -161,13 +209,7 @@ def main():
         # if there are cf tunnels that are not in our redis records,
         # delete them.
 
-        cf_tunnels = cf.accounts.cfd_tunnel.get(
-            account_id, params={'is_deleted': 'false'},
-        )
-        cf_tunnels = [
-            t for t in cf_tunnels
-            if t['name'].startswith(tunnel_mng.cf_tunnel_name_prefix)
-        ]
+        cf_tunnels = get_all_cf_tunnels()
 
         existing_cf_tunnel_ids = []
         for cf_tunnel in cf_tunnels:
@@ -176,10 +218,8 @@ def main():
                 logger.info(
                     f'Deleting unused cf tunnel: {cf_tunnel["id"]}')
                 try:
-                    cf.accounts.cfd_tunnel.delete(
-                        account_id, cf_tunnel['id']
-                    )
-                except CloudFlare.exceptions.CloudFlareAPIError as e:
+                    delete_cf_tunnel(cf_tunnel['id'])
+                except CloudFlareAPIError as e:
                     logger.warning(
                         'Could not delete cf tunnel. Maybe a '
                         'cloudflared instance is still connected.')
@@ -191,7 +231,7 @@ def main():
         # if there are any dns records not matching existing cf
         # tunnels, delete them.
 
-        all_dns_records = cf.zones.dns_records.get(zone_id)
+        all_dns_records = get_all_dns_records(zone_id)
         for dns_record in all_dns_records:
             if not dns_record['content'].endswith('.cfargotunnel.com'):
                 continue
@@ -199,7 +239,7 @@ def main():
             cf_tunnel_id = domain[:-len('.cfargotunnel.com')]
             if cf_tunnel_id not in existing_cf_tunnel_ids:
                 logger.info(f'Deleting unused DNS record: {dns_record["id"]}')
-                cf.zones.dns_records.delete(zone_id, dns_record['id'])
+                delete_dns_record(zone_id, dns_record['id'])
                 logger.info(f'DNS record deleted.')
 
         time.sleep(5 if reject else 1)
