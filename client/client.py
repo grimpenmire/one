@@ -43,12 +43,16 @@ def main():
     cleanup_old_files()
 
     token = env.CLIENT_API_TOKEN
+    headers = {
+        'Authorization': f'Bearer {token}',
+    }
     session = requests.Session()
+    session.headers.update(headers)
 
     logger.info('Requesting tunnel...')
     while True:
         resp = session.get(
-            f'{api_hostname}/connect/tunnel?token={token}')
+            f'{api_hostname}/connect/tunnel')
         if 400 <= resp.status_code < 500:
             try:
                 error = resp.json()
@@ -119,7 +123,7 @@ def main():
     while True:
         time.sleep(15)
         logger.info('Sending heartbeat...')
-        session.get(f'{api_hostname}/connect/tunnel?token={token}')
+        session.get(f'{api_hostname}/connect/tunnel')
 
 
 if __name__ == '__main__':

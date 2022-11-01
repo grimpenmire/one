@@ -56,6 +56,12 @@ def get_tunnel():
 
     token = request.args.get('token')
     if token is None:
+        token = request.headers.get('Authorization')
+        if token and ' ' in token:
+            kind, token = token.split(' ')
+            if kind.lower() != 'bearer':
+                token = None
+    if token is None:
         return jsonify({'description': 'No token'}), 400
 
     try:
