@@ -233,10 +233,15 @@ def main():
 
         all_dns_records = get_all_dns_records(zone_id)
         for dns_record in all_dns_records:
-            if not dns_record['content'].endswith('.cfargotunnel.com'):
+            if dns_record['type'] != 'CNAME':
                 continue
-            domain = dns_record['content']
-            cf_tunnel_id = domain[:-len('.cfargotunnel.com')]
+            name = dns_record['name']
+            if not name.startswith(tunnel_mng.cf_tunnel_name_prefix):
+                continue
+            target = dns_record['content']
+            if not target.endswith('.cfargotunnel.com'):
+                continue
+            cf_tunnel_id = target[:-len('.cfargotunnel.com')]
             if cf_tunnel_id not in existing_cf_tunnel_ids:
                 logger.info(f'Deleting unused DNS record: {dns_record["id"]}')
                 delete_dns_record(zone_id, dns_record['id'])
