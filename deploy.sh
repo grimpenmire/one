@@ -2,7 +2,22 @@
 
 set -e
 
+cwd=$(pwd)
+
+cleanup=false
+error_handler () {
+    echo "Cleaning up."
+    rm -rf $SOURCE_DIR || true
+    cd $cwd
+}
+
 startswith() { case $2 in "$1"*) true;; *) false;; esac; }
+
+trap error_handler EXIT
+
+SOURCE_DIR=$(mktemp -d -t g.one.XXXXXX)
+git clone . $SOURCE_DIR
+cd $SOURCE_DIR
 
 git_tag=$(git describe --tags 2>/dev/null)
 if ! startswith "v" "$git_tag"; then
