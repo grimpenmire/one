@@ -130,7 +130,11 @@ def main():
     while True:
         time.sleep(15)
         logger.info('Sending heartbeat...')
-        session.get(f'{api_hostname}/connect/tunnel')
+
+        try:
+            session.get(f'{api_hostname}/connect/tunnel')
+        except requests.RequestException as e:
+            logger.warning('Error while sending heartbeat: {e}')
 
 
 if __name__ == '__main__':
