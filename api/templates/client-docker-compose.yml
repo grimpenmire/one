@@ -2,7 +2,7 @@ version: "3.7"
 
 services:
   connect-client:
-    image: grimpen/one:latest
+    image: grimpen/one:{{ one_version }}
     entrypoint: ["python", "-m", "client.client"]
     volumes:
       - .:/data
