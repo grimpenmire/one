@@ -103,6 +103,16 @@ spec:
                 configMapKeyRef:
                   name: oneinfo
                   key: version
+            - name: CONNECT_SUBDOMAIN_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: oneinfo
+                  key: subdomain-prefix
+            - name: CONNECT_SUBDOMAIN_SEED
+              valueFrom:
+                secretKeyRef:
+                  name: connect-subdomain-seed
+                  key: seed
 ---
 apiVersion: v1
 kind: Service
@@ -202,6 +212,11 @@ spec:
                 secretKeyRef:
                   name: cloudflare-api-token
                   key: token
+            - name: CONNECT_SUBDOMAIN_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: oneinfo
+                  key: subdomain-prefix
 ---
 apiVersion: networking.k8s.io/v1
 kind: Ingress
