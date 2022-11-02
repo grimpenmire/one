@@ -7,6 +7,17 @@ _defs = {}
 
 
 def defenv(name: str, var_type: type, default=None, optional=True):
+    if name in _defs:
+        # if the environment variable already exists, accept the
+        # definition only if the new definition is the same as the old
+        # one.
+        definition = _defs[name]
+        if definition['type'] != var_type or \
+           definition['default'] != default or \
+           definition['optional'] != optional:
+            return
+        raise ValueError('Conflicting environment variable definition.')
+
     _defs[name] = {
         'name': name,
         'type': var_type,

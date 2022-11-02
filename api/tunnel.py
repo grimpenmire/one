@@ -8,10 +8,13 @@ defenv('TUNNEL_TTL', int, default=300)
 class TunnelManager:
     def __init__(self, redis):
         self.redis = redis
-        self.cf_tunnel_name_prefix = 'tunnel-'
         self.tunnel_ttl = env.TUNNEL_TTL
 
-    def get_tunnel(self, connector_id):
+    def get_tunnel(self, token_data):
+        print(token_data)
+        connector_id = token_data['connector_id']
+        tunnel_name = token_data['tunnel_name']
+
         key = f'tunnel:{connector_id}'
         tunnel = self.redis.get(key)
         if tunnel:
@@ -22,6 +25,7 @@ class TunnelManager:
         # key, both writers are going to write the same value, so we
         # don't even need to set nx=True in the set call down below.
         tunnel = {
+            'tunnel_name': tunnel_name,
             'status': 'pending',
             'hostname': None,
             'path': None,
@@ -30,13 +34,11 @@ class TunnelManager:
         self.redis.set(key, json.dumps(tunnel))
         return tunnel
 
-    def get_tunnel_uid(self):
-        uid = self.redis.incr('uid:tunnel')
-        return self.cf_tunnel_name_prefix + str(uid)
-
-    def write_tunnel(self, connector_id, *, hostname=None, path=None,
-                     cfd_creds=None, status=None, reject_reason=None):
+    def write_tunnel(self, connector_id, tunnel_name, *,
+                     hostname=None, path=None, cfd_creds=None,
+                     status=None, reject_reason=None):
         data = {
+            'tunnel_name': tunnel_name,
             'status': status,
             'hostname': hostname,
             'path': path,

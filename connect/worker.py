@@ -16,6 +16,7 @@ defenv('CLOUDFLARE_ACCOUNT_ID', str, optional=False)
 defenv('CLOUDFLARE_ZONE_ID', str, optional=False)
 defenv('MAX_CF_TUNNELS', int, default=500)
 defenv('CONNECT_DOMAIN', str, optional=False)
+defenv('CONNECT_SUBDOMAIN_PREFIX', str, default='t-')
 
 keep_running = True
 logger = logging.getLogger()
@@ -36,9 +37,8 @@ def signal_handler(signum, _):
     signal.signal(signal.SIGTERM, signal.SIG_DFL)
 
 
-def create_tunnel(connector_id):
+def create_tunnel(connector_id, tunnel_name):
     logger.info('Creating Cloudflare tunnel...')
-    tunnel_name = tunnel_mng.get_tunnel_uid()
     tunnel_secret = b64encode(os.urandom(32)).decode('ascii')
     tunnel = cf.accounts.cfd_tunnel.post(
         account_id,
@@ -93,6 +93,7 @@ def create_tunnel(connector_id):
     }
     tunnel_mng.write_tunnel(
         connector_id,
+        tunnel_name,
         hostname=hostname,
         path=path,
         cfd_creds=cfd_creds,
@@ -129,7 +130,7 @@ def get_all_cf_tunnels():
     )
     cf_tunnels = [
         t for t in cf_tunnels
-        if t['name'].startswith(tunnel_mng.cf_tunnel_name_prefix)
+        if t['name'].startswith(env.CONNECT_SUBDOMAIN_PREFIX)
     ]
     return cf_tunnels
 
@@ -187,14 +188,15 @@ def main():
 
             if reject:
                 tunnel_mng.write_tunnel(
-                    connector_id, status='rejected',
+                    connector_id, tunnel['tunnel_name'],
+                    status='rejected',
                     reject_reason=reject_reason)
                 continue
 
             logger.info(
                 f'Creating tunnel for connector: {connector_id}...')
 
-            create_tunnel(connector_id)
+            create_tunnel(connector_id, tunnel['tunnel_name'])
 
         active_cf_tunnel_ids = []
         for key in redis.scan_iter('tunnel:*'):
@@ -236,7 +238,7 @@ def main():
             if dns_record['type'] != 'CNAME':
                 continue
             name = dns_record['name']
-            if not name.startswith(tunnel_mng.cf_tunnel_name_prefix):
+            if not name.startswith(env.CONNECT_SUBDOMAIN_PREFIX):
                 continue
             target = dns_record['content']
             if not target.endswith('.cfargotunnel.com'):
