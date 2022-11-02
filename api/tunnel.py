@@ -11,9 +11,8 @@ class TunnelManager:
         self.tunnel_ttl = env.TUNNEL_TTL
 
     def get_tunnel(self, token_data):
-        print(token_data)
-        connector_id = token_data['connector_id']
-        tunnel_name = token_data['tunnel_name']
+        connector_id = token_data['cid']
+        tunnel_name = token_data['tname']
 
         key = f'tunnel:{connector_id}'
         tunnel = self.redis.get(key)

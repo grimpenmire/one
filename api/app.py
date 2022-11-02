@@ -72,7 +72,7 @@ def get_tunnel():
     except jwt.InvalidTokenError:
         return jsonify({'description': 'Invalid token'}), 400
 
-    if token_data['version'] != 1:
+    if token_data['ver'] != 1:
         return jsonify({'description': 'Unsupported token'}), 500
 
     tunnel = app.tunnel_manager.get_tunnel(token_data)
@@ -110,9 +110,9 @@ def get_client():
 def create_tunnel_token(secret, tunnel_name):
     connector_id = str(uuid4())
     data = {
-        'version': 1,
-        'connector_id': connector_id,
-        'tunnel_name': tunnel_name,
+        'ver': 1,
+        'cid': connector_id,
+        'tname': tunnel_name,
     }
     token = jwt.encode(data, secret, algorithm='HS256')
     return token
