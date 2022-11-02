@@ -2,14 +2,52 @@
 <html>
   <head>
     <title>Grimpen One - Connect Client Web UI</title>
+    <link rel="stylesheet" href="https://unpkg.com/mustard-ui@latest/dist/css/mustard-ui.min.css">
+    <script lang="javascript">
+      var androidLink = "{{ status.android_link }}";
+      var iosLink = "{{ status.ios_link }}";
+      function copyToClipboard(text) {
+          navigator.clipboard.writeText(text).then();
+      }
+    </script>
   </head>
   <body>
     {% if status.ready %}
-    <div>VPN is ready!</div>
-    <div>Android Link: {{ status.android_link }}</div>
-    <div>iOS Link: {{ status.ios_link }}</div>
+    <h2 class="alert alert-success">Proxy is Ready</h2>
+
+    <div class="row align-center">
+      <div class="panel col col-md-2">
+        <div class="panel-head">
+          <h3>Android Link</h3>
+        </div>
+        <div class="panel-body">
+          <p style="overflow-wrap: break-word">
+            {{ status.android_link }}
+          </p>
+        </div>
+        <div class="panel-footer">
+          <button class="button-primary" onclick="copyToClipboard(androidLink)">Copy</button>
+        </div>
+      </div>
+
+      <div class="panel col col-md-2">
+        <div class="panel-head">
+          <h3>iOS Link</h3>
+        </div>
+        <div class="panel-body">
+          <p style="overflow-wrap: break-word">
+            {{ status.ios_link }}
+          </p>
+        </div>
+        <div class="panel-footer">
+          <button class="button-primary" onclick="copyToClipboard(iosLink)">Copy</button>
+        </div>
+      </div>
+    </div>
     {% else %}
-    <div>Not ready yet! Please refresh in a few seconds...</div>
+    <h2 class="alert alert-warning">
+      Not ready yet! Please refresh in a few seconds...
+    </h2>
     {% endif %}
   </body>
 </html>
