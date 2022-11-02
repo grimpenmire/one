@@ -22,7 +22,8 @@ SOURCE_DIR=$(mktemp -d -t g.one.XXXXXX)
 git clone . $SOURCE_DIR
 cd $SOURCE_DIR
 
-docker build client/ -f client/Dockerfile.cfd -t ${cfd_version} \
+docker build client/ -f client/Dockerfile.cfd \
+       -t grimpen/cloudflared:${cfd_version} \
        --build-arg=CFD_VERSION=${cfd_version}
 docker push grimpen/cloudflared:${cfd_version}
 

@@ -1,0 +1,15 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Grimpen One - Connect Client Web UI</title>
+  </head>
+  <body>
+    {% if status.ready %}
+    <div>VPN is ready!</div>
+    <div>Android Link: {{ status.android_link }}</div>
+    <div>iOS Link: {{ status.ios_link }}</div>
+    {% else %}
+    <div>Not ready yet! Please refresh in a few seconds...</div>
+    {% endif %}
+  </body>
+</html>

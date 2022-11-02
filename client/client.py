@@ -5,6 +5,7 @@ import logging
 import requests
 from pyutils import config_logging, env, defenv
 from pyutils.sslinks import get_ss_android_link, get_ss_ios_link
+from . import web
 
 
 defenv('CLIENT_API_TOKEN', str, optional=False)
@@ -39,6 +40,8 @@ def cleanup_old_files():
 
 def main():
     config_logging()
+
+    web.launch_web_ui()
 
     cleanup_old_files()
 
@@ -118,6 +121,10 @@ def main():
     logger.info(f'Android Link: {android_link}')
     ios_link = get_ss_ios_link(config)
     logger.info(f'iOS Link: {ios_link}')
+
+    web.status.android_link = android_link
+    web.status.ios_link = ios_link
+    web.status.ready = True
 
     logger.info('Starting heartbeat.')
     while True:

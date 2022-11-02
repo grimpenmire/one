@@ -9,6 +9,8 @@ services:
     environment:
       - CLIENT_API_TOKEN={{ token }}
       - SS_PASSWORD={{ ss_password }}
+    ports:
+      - 6003:80
 
   ssv2ray:
     image: acrisliu/shadowsocks-libev
@@ -21,7 +23,8 @@ services:
 
   cloudflared:
     image: grimpen/cloudflared:2022.10.3
-    entrypoint: ["/wait-for-file.sh", "/etc/cloudflared/cfd-config.yml",
+    entrypoint: ["/usr/bin/wait4x", "http", "http://connect-client/status", "--expect-status-code", "200", "-t", "0",
+                 "--",
                  "cloudflared", "tunnel", "--config", "/etc/cloudflared/cfd-config.yml", "run"]
     restart: always
     volumes:
