@@ -102,11 +102,11 @@ def create_tunnel(connector_id, tunnel_name):
 
 
 def retry(f):
-    retries = 5
-    wait_time = 1
-
     @wraps(f)
     def wrapper(*args, **kwargs):
+        retries = 5
+        wait_time = 1
+
         while True:
             try:
                 return f(*args, **kwargs)
@@ -119,6 +119,7 @@ def retry(f):
             logger.info(f'Retrying after {wait_time} second(s)...')
             time.sleep(wait_time)
             wait_time *= 2
+            retries -= 1
 
     return wrapper
 
