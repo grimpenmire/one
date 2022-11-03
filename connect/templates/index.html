@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+  <head>
+    <title>Grimpen One Connect</title>
+    <link rel="stylesheet" href="https://unpkg.com/mustard-ui@latest/dist/css/mustard-ui.min.css">
+    <script lang="javascript">
+      function copyToClipboard(text) {
+          navigator.clipboard.writeText(text).then();
+      }
+      function copyCompose() {
+          let el = document.getElementById('docker-compose-code');
+          copyToClipboard(el.innerText);
+      }
+    </script>
+  </head>
+  <body>
+    <nav>
+      <div class="nav-container">
+        <div class="nav-logo">One Connect</div>
+      </div>
+    </nav>
+    <main>
+      <div class="container">
+        <section>
+          <div class="stepper">
+            <div class="step">
+              <p class="step-number">1</p>
+              <p class="step-title">Get your config</p>
+              <p>
+                Copy the following code to a file
+                named <code>docker-compose.yml</code>.  This file
+                contains a personal key for you. Do not share it with
+                anyone.
+              </p>
+              <pre><code id="docker-compose-code">{{ docker_compose_code }}</code></pre>
+              <button class="button-primary" onclick="copyCompose()">Copy</button>
+            </div>
+            <div class="step">
+              <p class="step-number">2</p>
+              <p class="step-title">Run compose</p>
+              <p>Go to the directory where you
+                saved <code>docker-compose.yml</code> and run it using
+                docker-compose:
+                <pre><code>$ docker-compose up</code></pre>
+              </p>
+            </div>
+            <div class="step">
+              <p class="step-number">3</p>
+              <p class="step-title">Share your proxy</p>
+              <p>Go
+                to <a href="http://localhost:6003">http://localhost:6003</a>,
+                copy the config you want, and share it with others.</p>
+            </div>
+          </div>
+        </section>
+      </div>
+    </main>
+    <footer>
+      Made with 🖤 and <a href="https://kylelogue.github.io/mustard-ui/index.html">🌭</a>
+      by <a href="https://github.com/grimpenmire">Grimpen</a>
+    </footer>
+  </body>
+</html>

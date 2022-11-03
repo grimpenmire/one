@@ -98,21 +98,6 @@ spec:
                 secretKeyRef:
                   name: api-secret-key
                   key: secret-key
-            - name: ONE_VERSION
-              valueFrom:
-                configMapKeyRef:
-                  name: oneinfo
-                  key: version
-            - name: CONNECT_SUBDOMAIN_PREFIX
-              valueFrom:
-                configMapKeyRef:
-                  name: oneinfo
-                  key: subdomain-prefix
-            - name: CONNECT_SUBDOMAIN_SEED
-              valueFrom:
-                secretKeyRef:
-                  name: connect-subdomain-seed
-                  key: seed
 ---
 apiVersion: v1
 kind: Service
@@ -165,7 +150,7 @@ metadata:
 spec:
   type: ClusterIP
   ports:
-    - name: api
+    - name: web
       port: 80
       targetPort: 8000
   selector:
@@ -264,6 +249,7 @@ spec:
       - "POST"
     accessControlAllowOriginList:
       - "https://grimpen.one"
+      - "https://connect.grimpen.one"
     accessControlMaxAge: 120
 ---
 apiVersion: networking.k8s.io/v1
@@ -277,7 +263,8 @@ metadata:
     traefik.ingress.kubernetes.io/router.middlewares: default-ingress-whitelist@kubernetescrd
 spec:
   rules:
-    - http:
+    - host: "grimpen.one"
+      http:
         paths:
           - path: /
             pathType: Prefix
@@ -300,3 +287,82 @@ spec:
       - 192.168.1.0/16
       - 10.0.0.0/8
       - 172.16.0.0/12
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: connect-website
+spec:
+  selector:
+    matchLabels:
+      app: connect-website
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: connect-website
+    spec:
+      containers:
+        - name: connect-website
+          image: "grimpen/one:%VERSION%"
+          command: ["gunicorn", "connect.website:create_app()", "-b", "0.0.0.0:8000", "--access-logfile", "-", "--workers", "4"]
+          ports:
+            - containerPort: 8000
+          env:
+            - name: WEBSITE_SECRET_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: api-secret-key
+                  key: secret-key
+            - name: ONE_VERSION
+              valueFrom:
+                configMapKeyRef:
+                  name: oneinfo
+                  key: version
+            - name: CONNECT_SUBDOMAIN_PREFIX
+              valueFrom:
+                configMapKeyRef:
+                  name: oneinfo
+                  key: subdomain-prefix
+            - name: CONNECT_SUBDOMAIN_SEED
+              valueFrom:
+                secretKeyRef:
+                  name: connect-subdomain-seed
+                  key: seed
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: connect-website
+  labels:
+    app: connect-website
+spec:
+  type: ClusterIP
+  ports:
+    - name: web
+      port: 80
+      targetPort: 8000
+  selector:
+    app: connect-website
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: connect-website
+  annotations:
+    # notice that we need to prefix the middleware name with the
+    # namespace it's in (default in this case) and also add the
+    # @kubernetescrd suffix, otherwise this won't work.
+    traefik.ingress.kubernetes.io/router.middlewares: default-ingress-whitelist@kubernetescrd
+spec:
+  rules:
+    - host: "connect.grimpen.one"
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: connect-website
+                port:
+                  number: 80

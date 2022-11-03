@@ -50,4 +50,4 @@ kubectl apply -f $manifest_file
 rm $manifest_file
 
 kubectl delete cm oneinfo || true
-kubectl create cm oneinfo --from-literal=version=latest
+kubectl create cm oneinfo --from-literal=version=latest --from-literal=subdomain-prefix=t-
