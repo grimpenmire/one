@@ -214,7 +214,8 @@ metadata:
     traefik.ingress.kubernetes.io/router.middlewares: default-api-prefix-stripper@kubernetescrd,default-api-cors-headers@kubernetescrd, default-ingress-whitelist@kubernetescrd
 spec:
   rules:
-    - http:
+    - host: grimpen.one
+      http:
         paths:
           - path: /api/v1
             pathType: Prefix
