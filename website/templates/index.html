@@ -55,7 +55,7 @@
               androidLink = `<a onclick='copyToClipboard(getAndroidLink(lastFetchedServers[${i}].config))' href="#">android</a>`;
               iosLink = `<a onclick='copyToClipboard(getIosLink(lastFetchedServers[${i}].config))' href="#">iOS</a>`;
               jsonLink = `<a onclick='copyToClipboard(JSON.stringify(getShadowsocksConfig(lastFetchedServers[${i}].config)))' href="#">json</a>`;
-              li.innerHTML = `<div>${dot} ${server.name} ${androidLink} ${iosLink} ${jsonLink}</div>`
+              li.innerHTML = `<div>${dot} ${server.name} [${androidLink} | ${iosLink} | ${jsonLink}]</div>`
               ul.appendChild(li);
               i += 1;
           }
@@ -137,6 +137,10 @@
   </head>
   <body>
     <section>
+      <div>
+        Click on the config you need ("android", "iOS", "json") to
+        copy it into the clipboard.
+      </div>
       <div>
         <ul id="serverlist"></ul>
       </div>
