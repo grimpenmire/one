@@ -5,22 +5,22 @@
 
     <style type="text/css" media="screen">
       .greendot {
-            height: 10px;
-            width: 10px;
+            height: 0.8em;
+            width: 0.8em;
             background-color: green;
             border-radius: 50%;
             display: inline-block;
       }
       .orangedot {
-            height: 10px;
-            width: 10px;
+            height: 0.8em;
+            width: 0.8em;
             background-color: orange;
             border-radius: 50%;
             display: inline-block;
       }
       .reddot {
-            height: 10px;
-            width: 10px;
+            height: 0.8em;
+            width: 0.8em;
             background-color: red;
             border-radius: 50%;
             display: inline-block;
@@ -45,11 +45,11 @@
               let li = document.createElement('div');
               let dot;
               if (server.status == "working") {
-                  dot = '<span class="greendot" title="working"></span>';
+                  dot = `<span class="greendot" title="working (response time: ${server.response_time.toFixed(2)} seconds)"></span>`;
               } else if (server.status == "invalid") {
                   dot = '<span class="orangedot" title="invalid config"></span>';
               } else {
-                  dot = '<span class="reddot" title="not working"></span>';
+                  dot = `<span class="reddot" title="not working (${server.error})"></span>`;
               }
               androidLink = `<a onclick='copyToClipboard(getAndroidLink(lastFetchedServers[${i}].config))' href="#">android</a>`;
               iosLink = `<a onclick='copyToClipboard(getIosLink(lastFetchedServers[${i}].config))' href="#">iOS</a>`;

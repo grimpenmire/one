@@ -9,13 +9,14 @@ import base64
 import logging
 import subprocess
 import requests
+from multiprocessing import Pool
 from urllib.parse import urlparse, parse_qs
 from pyutils import get_redis, config_logging
 
 DEFAULT_SCRAPE_URL = 'https://raw.githubusercontent.com/WeAreMahsaAmini/FreeInternet/main/guides/shadowsocks-v2ray-tls/CONFIGS.md'
 SCRAPE_URL = os.environ.get('SCRAPE_URL', DEFAULT_SCRAPE_URL)
 
-DEFAULT_TEST_TIMEOUT = 3.0
+DEFAULT_TEST_TIMEOUT = 60.0
 TEST_TIMEOUT = int(os.environ.get('TEST_TIMEOUT', DEFAULT_TEST_TIMEOUT))
 
 logger = logging.getLogger(__name__)
@@ -77,12 +78,18 @@ def get_config_from_android_url(parsed_url):
     }
 
 
-def test_android_url(config):
+def test_android_url(config, index):
+    logger.info(f'Testing: {config["title"]}')
+
+    # this method of port selection is not generally robust, but in a
+    # container it's going to work fine.
+    port = 1080 + index
+
     ss_local_args = [
         shutil.which('ss-local'),
         '-s', config['remote_addr'],
         '-p', str(config['remote_port']),
-        '-l', '1080',
+        '-l', str(port),
         '-k', config['password'],
         '-m', config['method'],
         '--plugin', config['plugin'],
@@ -97,11 +104,11 @@ def test_android_url(config):
             stderr=subprocess.DEVNULL)
     except Exception as e:
         logger.error(f'Error executing ss-local: {e}')
-        return ('error', e)
+        return ('error', e, float('inf'))
 
     proxies = {
-        'http': 'socks5h://localhost:1080',
-        'https': 'socks5h://localhost:1080',
+        'http': f'socks5h://localhost:{port}',
+        'https': f'socks5h://localhost:{port}',
     }
     time_spent = 0
     last_exception = None
@@ -110,9 +117,11 @@ def test_android_url(config):
         if proc.poll() is not None:
             # ss-local terminated
             proc.kill()
-            return ('not-working', 'terminated')
+            return ('not-working', 'terminated', float('inf'))
         try:
-            resp = requests.get('https://google.com', proxies=proxies)
+            resp = requests.get('https://google.com',
+                                proxies=proxies,
+                                timeout=TEST_TIMEOUT)
         except requests.ConnectionError as e:
             logger.debug('Connection error while testing; waiting...')
         except requests.Timeout as e:
@@ -121,15 +130,22 @@ def test_android_url(config):
             # http errors come from the web server; so the proxy is
             # working
             proc.kill()
-            return ('working', 'http-error')
+            elapsed_time = time.monotonic() - start_time
+            return ('working', 'http-error', elapsed_time)
         else:
             proc.kill()
-            return ('working', 'success')
+            elapsed_time = time.monotonic() - start_time
+            return ('working', 'success', elapsed_time)
 
-        if time.monotonic() - start_time > TEST_TIMEOUT:
+        elapsed_time = time.monotonic() - start_time
+        if elapsed_time > TEST_TIMEOUT:
             proc.kill()
-            return ('not-working', 'timeout')
+            return ('not-working', 'timeout', elapsed_time)
         time.sleep(0.1)
+
+
+def apply_test_android_url(args):
+    return test_android_url(*args)
 
 
 def main():
@@ -143,6 +159,7 @@ def main():
     logger.info(f'Found {len(urls)} url(s).')
 
     results = []
+    to_be_tested = {}
     for url in urls:
         parsed_url = urlparse(url)
         url_type = detect_url_type(parsed_url)
@@ -154,22 +171,38 @@ def main():
         except SsUrlParseError as e:
             logger.info(f'Invalid URL: {url}')
             logger.debug(f'Error: {e}')
-            status = 'invalid'
-            error = e
+            results.append({
+                'name': parsed_url.hostname,
+                'config': {},
+                'status': 'invalid',
+                'error': str(e),
+                'response_time': float('inf'),
+            })
         else:
-            logger.info(f'Testing: {config["title"]}')
-            status, error = test_android_url(config)
+            to_be_tested[url] = config
 
-        if status == 'working':
-            logger.info('Status: working')
-        else:
-            logger.info(f'Status: {status}   Error: {error}')
-        results.append({
-            'name': config['title'],
-            'config': config,
-            'status': status,
-            'error': str(error),
-        })
+    with Pool(20) as pool:
+        logger.info(f'Testing {len(to_be_tested)} url(s)...')
+        args = [
+            (config, i)
+            for i, config in enumerate(to_be_tested.values())
+        ]
+        for (url, config), (status, error, resp_time) in zip(
+                to_be_tested.items(),
+                pool.imap(apply_test_android_url, args)):
+            results.append({
+                'name': config['title'],
+                'config': config,
+                'status': status,
+                'error': str(error),
+                'response_time': resp_time,
+            })
+            if status == 'working':
+                logger.info(f'{config["name"]}: working')
+            else:
+                logger.info(f'{config["name"]}: {status}   Error: {error}')
+
+    results.sort(key=lambda r: r['response_time'])
 
     redis.set('vpn:status-list', json.dumps(results))
     logger.info('Done.')
