@@ -202,7 +202,9 @@ def main():
             else:
                 logger.info(f'{config["name"]}: {status}   Error: {error}')
 
-    results.sort(key=lambda r: r['response_time'])
+    def fix_resp_time(value):
+        return value if value is not None else float('inf')
+    results.sort(key=lambda r: fix_resp_time(r['response_time']))
 
     redis.set('vpn:status-list', json.dumps(results))
     logger.info('Done.')
