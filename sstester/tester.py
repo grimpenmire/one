@@ -104,7 +104,7 @@ def test_android_url(config, index):
             stderr=subprocess.DEVNULL)
     except Exception as e:
         logger.error(f'Error executing ss-local: {e}')
-        return ('error', e, float('inf'))
+        return ('error', e, None)
 
     proxies = {
         'http': f'socks5h://localhost:{port}',
@@ -117,7 +117,7 @@ def test_android_url(config, index):
         if proc.poll() is not None:
             # ss-local terminated
             proc.kill()
-            return ('not-working', 'terminated', float('inf'))
+            return ('not-working', 'terminated', None)
         try:
             resp = requests.get('https://google.com',
                                 proxies=proxies,
@@ -176,7 +176,7 @@ def main():
                 'config': {},
                 'status': 'invalid',
                 'error': str(e),
-                'response_time': float('inf'),
+                'response_time': None,
             })
         else:
             to_be_tested[url] = config
